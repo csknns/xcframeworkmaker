@@ -14,16 +14,25 @@ import Basics
 
 struct FrameworkBuilder {
     let tempDir = NSTemporaryDirectory()
-    let originalPackagePath = FileManager.default.currentDirectoryPath
+    let originalPackagePath: String
     let packagePath: String
 
     var scheme: String
 
-    init(scheme: String) {
+    init(scheme: String, originalPackagePath: String?) throws {
         self.scheme = scheme
+        self.originalPackagePath = originalPackagePath ?? FileManager.default.currentDirectoryPath
         packagePath = "\(tempDir)/\(scheme)"
-//        try? runAndPrint("mkdir", "\(packagePath)/")
-        try? runAndPrint("cp", "-r", "\(originalPackagePath)/", "\(packagePath)")
+
+        print("cleaning up temp directory !")
+        os_log("cleaning up temp directory")
+        // Clean up data from temp directory
+        try? runAndPrint("rm", "-r", "-f", "\(packagePath)/")
+        try runAndPrint("mkdir", "\(packagePath)/")
+        // Copy library files to a temp folder
+        try runAndPrint("cp", "-r", "\(self.originalPackagePath)/", "\(packagePath)")
+
+        main.currentdirectory = packagePath
     }
 
     func arun() async throws {
