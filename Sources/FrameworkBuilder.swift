@@ -50,8 +50,7 @@ struct FrameworkBuilder {
             print("building \(scheme) for \(destination)")
             Command.archive(package: packagePath, scheme: scheme, destination: destination, derivedDataPath: derivedDataPath)
                 .forEach { command in
-        //            print(command)
-                    try! runAndPrint(command.cmd, command.args)
+                    try! command.run()
                 }
         }
 
@@ -151,12 +150,27 @@ struct FrameworkBuilder {
 struct Command: CustomStringConvertible {
     let cmd: String
     let args: [String]
+    let allowToFail: Bool
+
+    init(cmd: String, args: [String], allowToFail: Bool = false) {
+        self.cmd = cmd
+        self.args = args
+        self.allowToFail = allowToFail
+    }
+
+    func run() throws {
+        if allowToFail {
+            try? runAndPrint(cmd, args)
+        } else {
+            try runAndPrint(cmd, args)
+        }
+    }
 
     var description: String {
         return "'\(cmd)' '\(args)'"
     }
 
-    static let xcodePath: String = { run("xcrun", "xcode-select", "--print-path").stdout }()
+    static let xcodePath: String = { SwiftShell.run("xcrun", "xcode-select", "--print-path").stdout }()
 
     static func xcodebuildPath() -> String {
         return "\(xcodePath)/usr/bin/xcodebuild".replacingOccurrences(of: "()", with: "")
@@ -197,17 +211,21 @@ struct Command: CustomStringConvertible {
         let cp = "cp"
 
         return [Command.init(cmd: path,
-                             args: ["archive", "-scheme", "\(scheme)", "-destination"] + ["\(destination)"] + "-archivePath Release-\(suffix).xcarchive -derivedDataPath \(derivedDataPath) SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES".split(separator: " ").map({ String($0) }) ),
+                             args: ["archive", "-scheme", "\(scheme)", "-destination"] + ["\(destination)"] + "-archivePath Release-\(suffix).xcarchive -derivedDataPath \(derivedDataPath) SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES INSTALL_PATH=usr/local/lib".split(separator: " ").map({ String($0) }) ),
                              Command.init(cmd: mkdir,
                                           args: "-p \(package)/Release-\(suffix).xcarchive/Products/usr/local/lib/\(scheme).framework/Modules/".split(separator: " ").map({ String($0) }) ),
+                // swiftmodule does not exist on non Swift SwiftPM packages (e.g. Objective-C or C)
                              Command.init(cmd: cp,
-                                          args: "-r \(derivedDataPath)/Build/Intermediates.noindex/ArchiveIntermediates/\(scheme)/BuildProductsPath/Release-\(suffix)/\(scheme).swiftmodule Release-\(suffix).xcarchive/Products/usr/local/lib/\(scheme).framework/Modules/\(scheme).swiftmodule".split(separator: " ").map({ String($0) }) ),
+                                          args: "-r \(derivedDataPath)/Build/Intermediates.noindex/ArchiveIntermediates/\(scheme)/BuildProductsPath/Release-\(suffix)/\(scheme).swiftmodule Release-\(suffix).xcarchive/Products/usr/local/lib/\(scheme).framework/Modules/\(scheme).swiftmodule".split(separator: " ").map({ String($0) }) ,
+                                          allowToFail: true),
                              Command.init(cmd: cp,
-                                          args: "-r \(derivedDataPath)/Build/Intermediates.noindex/ArchiveIntermediates/\(scheme)/IntermediateBuildFilesPath/\(scheme).build/Release-\(suffix)/\(scheme).build/\(scheme).modulemap Release-\(suffix).xcarchive/Products/usr/local/lib/\(scheme).framework/Modules/".split(separator: " ").map({ String($0) }) ),
+                                          args: "-r \(derivedDataPath)/Build/Intermediates.noindex/ArchiveIntermediates/\(scheme)/IntermediateBuildFilesPath/\(scheme).build/Release-\(suffix)/\(scheme).build/\(scheme).modulemap Release-\(suffix).xcarchive/Products/usr/local/lib/\(scheme).framework/Modules/".split(separator: " ").map({ String($0) }),
+                                          allowToFail: true),
                              Command.init(cmd: mkdir,
                                           args: "-p Release-\(suffix).xcarchive/Products/usr/local/lib/\(scheme).framework/Headers/".split(separator: " ").map({ String($0) }) ),
                              Command.init(cmd: cp,
-                                          args: "-r \(derivedDataPath)/Build/Intermediates.noindex/ArchiveIntermediates/\(scheme)/IntermediateBuildFilesPath/GeneratedModuleMaps-\(suffix)/\(scheme)-Swift.h Release-\(suffix).xcarchive/Products/usr/local/lib/\(scheme).framework/Headers".split(separator: " ").map({ String($0) }) ),
+                                          args: "-r \(derivedDataPath)/Build/Intermediates.noindex/ArchiveIntermediates/\(scheme)/IntermediateBuildFilesPath/GeneratedModuleMaps-\(suffix)/\(scheme)-Swift.h Release-\(suffix).xcarchive/Products/usr/local/lib/\(scheme).framework/Headers".split(separator: " ").map({ String($0) }),
+                                          allowToFail: true),
                              ]
     }
 
