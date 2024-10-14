@@ -59,8 +59,12 @@ struct FrameworkBuilder {
         let command = Command.createXcframework(package: packagePath, scheme: scheme, destinations: destinations, derivedDataPath: derivedDataPath)
         //print(command.args)
         print("creating \(scheme).xcframework")
-        //let a = await try! safeShell(command).value
-        try! runAndPrint(command.cmd, command.args)
+
+        //TODO: name should be taken from the createXcframework command
+        // delete previous framework, of the create command will fail
+        try? runAndPrint("rm", "-r", "\(packagePath)/\(scheme).xcframework")
+
+        try! command.run()
     }
 
 //    static func copyLibraryToTempFolder() -> String {
@@ -73,8 +77,10 @@ struct FrameworkBuilder {
     // xcodebuild tries to build the xcode project
     // with no way of pointing to SPM library
     func removeXcodeProjectAndWorkspace() {
-        try? runAndPrint("rm", "\(packagePath)/*.xcodeproj", "\(tempDir)/")
-        try? runAndPrint("rm", "\(packagePath)/*.xcworkspace", "\(tempDir)/")
+        let manager = FileManager.default
+        try! manager.contentsOfDirectory(atPath: packagePath)
+            .filter({ $0.hasSuffix(".xcodeproj") || $0.hasSuffix(".xcworkspace") })
+            .forEach({ try! manager.removeItem(atPath: $0) })
     }
 
     func addDynamicTypeToLibraryTarget() async throws {
