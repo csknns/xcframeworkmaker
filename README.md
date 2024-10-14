@@ -1,6 +1,6 @@
 ![master workflow](https://github.com/csknns/csv2strings/actions/workflows/swift.yml/badge.svg
 )
-# csv2strings
+# xcframeworkmaker 
 
 A simple command line utility to build an xcframework from a SwiftPM Library.
 
