@@ -52,6 +52,12 @@ struct xcframaker: ParsableCommand {
         let derivedDataPath = "lala"//
         let tempDir = NSTemporaryDirectory()
 
+        // If in the same folder we have Package.swift and an xcode project,
+        // xcodebuild tries to build the xcode project
+        // with no way of pointing to SPM library
+        try? runAndPrint("mv", "\(packagePath)/*.xcodeproj", "\(tempDir)/")
+        try? runAndPrint("mv", "\(packagePath)/*.xcworkspace", "\(tempDir)/")
+
         // build frameworks for all platforms
         let destinations = [Command.Destination.ios, Command.Destination.iosSimulator] //
         for destination in destinations /*Command.Destination.allCases*/ {
