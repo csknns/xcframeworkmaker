@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  FrameworkBuilder.swift
 //  
 //
 //  Created by Christos koninis on 4/10/24.
@@ -247,45 +247,6 @@ struct Command: CustomStringConvertible {
         createXcframeworkCommandArgs.append(contentsOf: ["-output", "\(scheme).xcframework"])
             return Command.init(cmd: xcodebuildPath, args: createXcframeworkCommandArgs)
         }
-}
-
-
-@discardableResult // Add to suppress warnings when you don't want/need a result
-func safeShell(_ command: String) -> Future<String, Error> {
-
-    let a: Future<String, Error> =
-     Future { promise in
-        let task = Process()
-        let pipe = Pipe()
-
-        task.currentDirectoryPath = "/Users/koninich/develop/addtowalletpm"
-        task.standardOutput = pipe
-        task.standardError = pipe
-        task.arguments = ["-c", command]
-        task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        task.standardInput = nil
-
-         do {
-             try task.run()
-         } catch {
-             promise(Result.failure(error))
-             return
-         }
-
-         task.terminationHandler = { t in
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8)!
-
-            guard task.terminationStatus == 0 else {
-                let error = output
-                promise(Result.failure(error))
-                                return
-            }
-            promise(Result.success(output))
-        }
-    }
-
-    return a
 }
 
 extension SourceCodeFragment {
