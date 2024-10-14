@@ -25,7 +25,6 @@ struct FrameworkBuilder {
         packagePath = "\(tempDir)/\(scheme)"
 
         print("cleaning up temp directory !")
-        os_log("cleaning up temp directory")
         // Clean up data from temp directory
         try? runAndPrint("rm", "-r", "-f", "\(packagePath)/")
         try runAndPrint("mkdir", "\(packagePath)/")
@@ -37,12 +36,13 @@ struct FrameworkBuilder {
 
     func arun() async throws {
         print("arun")
+        let scheme = scheme
+        let derivedDataPath = "\(packagePath)/lala"//
+
+        try? runAndPrint("rm", "-rf", "\(derivedDataPath)")
 
         removeXcodeProjectAndWorkspace()
         try await addDynamicTypeToLibraryTarget()
-
-        let scheme = scheme//"Alamofire"//"AddToWalletPM"
-        let derivedDataPath = "lala"//
 
         // build frameworks for all platforms
         let destinations = [Command.Destination.ios, Command.Destination.iosSimulator] //
@@ -97,11 +97,11 @@ struct FrameworkBuilder {
         print("Found manifest \(manifest.path)")
 
         guard let library = manifest.products.first(where: { $0.name == scheme }) else {
-            print("Could not find library in packges with name '\(scheme)'")
+            print("Could not find library with name '\(scheme)'")
             return
         }
 
-        // TODO: add .dynamic to target
+        // Add .dynamic to target
         let newProduct = try ProductDescription(name: library.name,
                                                 type: .library(.dynamic),
                                                 targets: library.targets)
@@ -208,7 +208,6 @@ struct Command: CustomStringConvertible {
         }
     }
 
-    //xcodebuild archive -scheme $SchemeName -destination $DestinationiPhone -archivePath \(xcarchiveName(destination:destination)) -derivedDataPath $DerivedDataPath SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES
     // copy the .swiftmodule from the derived data data to the .xcarchive
     static func archive(package: String, scheme: String, destination: Destination, derivedDataPath: String) -> [Command] {
         let suffix = Command.destinationSuffix(destination:destination)
