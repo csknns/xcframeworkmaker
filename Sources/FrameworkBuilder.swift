@@ -17,12 +17,13 @@ struct FrameworkBuilder {
     let originalPackagePath = FileManager.default.currentDirectoryPath
     let packagePath: String
 
-    var scheme: String = "Alamofire"
+    var scheme: String
 
     init(scheme: String) {
         self.scheme = scheme
-        try? runAndPrint("cp", "\(originalPackagePath)/*", "\(tempDir)/")
-        packagePath = tempDir
+        packagePath = "\(tempDir)/\(scheme)"
+//        try? runAndPrint("mkdir", "\(packagePath)/")
+        try? runAndPrint("cp", "-r", "\(originalPackagePath)/", "\(packagePath)")
     }
 
     func arun() async throws {
@@ -34,7 +35,6 @@ struct FrameworkBuilder {
         let scheme = scheme//"Alamofire"//"AddToWalletPM"
         let derivedDataPath = "lala"//
 
-return
         // build frameworks for all platforms
         let destinations = [Command.Destination.ios, Command.Destination.iosSimulator] //
         for destination in destinations /*Command.Destination.allCases*/ {
@@ -66,10 +66,7 @@ return
     // with no way of pointing to SPM library
     func removeXcodeProjectAndWorkspace() {
         try? runAndPrint("rm", "\(packagePath)/*.xcodeproj", "\(tempDir)/")
-        try? runAndPrint("mv", "\(packagePath)/*.xcworkspace", "\(tempDir)/")
-
-        try? runAndPrint("mv", "\(packagePath)/*.xcodeproj", "\(tempDir)/")
-        try? runAndPrint("mv", "\(packagePath)/*.xcworkspace", "\(tempDir)/")
+        try? runAndPrint("rm", "\(packagePath)/*.xcworkspace", "\(tempDir)/")
     }
 
     func addDynamicTypeToLibraryTarget() async throws {
@@ -89,6 +86,20 @@ return
             print("Could not find library in packges with name '\(scheme)'")
             return
         }
+
+        // TODO: add .dynamic to target
+        let newProduct = try ProductDescription(name: library.name,
+                                                type: .library(.dynamic),
+                                                targets: library.targets)
+
+        let newProducts = manifest.products.map { p in
+            if p.name == scheme {
+                return newProduct
+            } else {
+                return p
+            }
+        }
+
         let newManifest = Manifest(displayName: manifest.displayName,
                                    path: manifest.path,
                                    packageKind: manifest.packageKind,
@@ -103,10 +114,9 @@ return
                                    cLanguageStandard: manifest.cLanguageStandard,
                                    cxxLanguageStandard: manifest.cxxLanguageStandard,
                                    swiftLanguageVersions: manifest.swiftLanguageVersions,
-                                   products: manifest.products,
+                                   products: newProducts,
                                    targets: manifest.targets)
 
-        // TODO: add .dynamic to target
         let newContents = try newManifest.generateManifestFileContents(
             packageDirectory: try AbsolutePath(validating: packagePath))
         
@@ -114,10 +124,6 @@ return
         try newContents.write(toFile: manifest.path.pathString,
                               atomically: true,
                               encoding: .utf8)
-        //        print(try manifest.generateManifestFileContents(
-        //            packageDirectory: try AbsolutePath(validating: packagePath),
-        //            toolsVersionHeaderComment: "toolsVersionHeaderComment",
-        //            additionalImportModuleNames: [""]))
         print(newContents)
 
     }

@@ -34,8 +34,8 @@ print("running")
 
 struct xcframaker: ParsableCommand {
 
-//    @Argument(help: "The scheme to build")
-    var scheme: String = "Alamofire"
+    @Argument(help: "The scheme to build")
+    var scheme: String
 
     mutating func run() throws {
         print("run")
@@ -45,8 +45,8 @@ struct xcframaker: ParsableCommand {
             try await FrameworkBuilder(scheme: scheme).arun()
             semaphore.signal()
         }
-        print("run end")
         semaphore.wait()
+        print("run end")
     }
 }
 
