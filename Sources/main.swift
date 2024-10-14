@@ -6,15 +6,16 @@ import Workspace
 import Foundation
 import Combine
 import SwiftShell
+import ArgumentParser
 
-print("Hello, world!")
+print("running")
 
 // PREREQUISITES
 // ============
 
 // We need a package to work with.
 // This computes the path of this package root based on the file location
-//let packagePath = try AbsolutePath(validating: "/Users/koninich/develop/AFSE/book-seat-backend")
+//let packagePath = try AbsolutePath(validating: "/Users/x/develop/AFSE/book-seat-backend")
 
 // LOADING
 // =======
@@ -34,28 +35,49 @@ print("Hello, world!")
 //
 //print("dependencies\n \(graph.requiredDependencies.first!.)")
 
-let packagePath = "/Users/koninich/develop/addtowalletpm"
-let scheme = "AddToWalletPM"
-let derivedDataPath = "lala"//NSTemporaryDirectory()
+struct xcframaker: ParsableCommand {
+//    @Flag(help: "Include a counter with each repetition.")
+//    var includeCounter = false
+//
+//    @Option(name: .shortAndLong, help: "The number of times to repeat 'phrase'.")
+//    var count: Int? = nil
 
-// build frameworks for all platforms
-let destinations = [Command.Destination.ios, Command.Destination.iosSimulator] //
-for destination in destinations /*Command.Destination.allCases*/ {
-    print("building \(scheme) for \(destination)")
-    Command.archive(package: packagePath, scheme: scheme, destination: destination, derivedDataPath: derivedDataPath)
-        .forEach { command in
-//            print(command)
-            try! run(command.cmd, command.args)
+//    @Argument(help: "The scheme to build")
+    var scheme: String = "Alamofire"
+
+    mutating func run() throws {
+        //"/Users/x/Downloads/Alamofire-master"//"/Users/x/develop/addtowalletpm"
+        let packagePath = FileManager.default.currentDirectoryPath
+        let scheme = scheme//"Alamofire"//"AddToWalletPM"
+        let derivedDataPath = "lala"//
+        let tempDir = NSTemporaryDirectory()
+
+        // build frameworks for all platforms
+        let destinations = [Command.Destination.ios, Command.Destination.iosSimulator] //
+        for destination in destinations /*Command.Destination.allCases*/ {
+            print("building \(scheme) for \(destination)")
+            Command.archive(package: packagePath, scheme: scheme, destination: destination, derivedDataPath: derivedDataPath)
+                .forEach { command in
+        //            print(command)
+                    try! runAndPrint(command.cmd, command.args)
+                }
         }
+
+        // combine frameworks to an xcframework
+        //print("creating xcframework")
+        let command = Command.createXcframework(package: packagePath, scheme: scheme, destinations: destinations, derivedDataPath: derivedDataPath)
+        //print(command.args)
+        print("creating \(scheme).xcframework")
+        //let a = await try! safeShell(command).value
+        try! runAndPrint(command.cmd, command.args)
+
+
+        try? runAndPrint("mv", "\(tempDir)/*", "\(packagePath)/")
+        //try! runAndPrint("mv", "*.xcworkspace", "\(tempDir)/")
+    }
 }
 
-// combine frameworks to an xcframework
-//print("creating xcframework")
-let command = Command.createXcframework(package: packagePath, scheme: scheme, destinations: destinations, derivedDataPath: derivedDataPath)
-//print(command.args)
-print("creating \(scheme).xcframework")
-//let a = await try! safeShell(command).value
-try! run(command.cmd, command.args)
+xcframaker.main()
 
 struct Command: CustomStringConvertible {
     let cmd: String
