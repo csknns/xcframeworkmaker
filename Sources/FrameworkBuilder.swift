@@ -216,7 +216,7 @@ struct Command: CustomStringConvertible {
         let cp = "cp"
 
         return [Command.init(cmd: path,
-                             args: ["archive", "-scheme", "\(scheme)", "-destination"] + ["\(destination)"] + "-archivePath Release-\(suffix).xcarchive -derivedDataPath \(derivedDataPath) SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES INSTALL_PATH=usr/local/lib".split(separator: " ").map({ String($0) }) ),
+                             args: ["archive", "-scheme", "\(scheme)", "-destination"] + ["\(destination)"] + "-archivePath Release-\(suffix).xcarchive -derivedDataPath \(derivedDataPath) SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES  OTHER_SWIFT_FLAGS=\"-no-verify-emitted-module-interface\"  INSTALL_PATH=usr/local/lib".split(separator: " ").map({ String($0) }) ),
                              Command.init(cmd: mkdir,
                                           args: "-p \(package)/Release-\(suffix).xcarchive/Products/usr/local/lib/\(scheme).framework/Modules/".split(separator: " ").map({ String($0) }) ),
                 // swiftmodule does not exist on non Swift SwiftPM packages (e.g. Objective-C or C)
