@@ -8,7 +8,7 @@ A simple command line utility to build an xcframework from a SwiftPM Library.
 
 Simply download the package and run:
 
-```swift run xcframaker Alamofire /Path/To/Alamofire-master/```
+```swift run xcframeworkmaker Alamofire /Path/To/Alamofire-master/```
 
 It will create an `Alamofire.xcframework`.
 
