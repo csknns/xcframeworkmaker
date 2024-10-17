@@ -128,6 +128,7 @@ struct FrameworkBuilder {
                                    cLanguageStandard: manifest.cLanguageStandard,
                                    cxxLanguageStandard: manifest.cxxLanguageStandard,
                                    swiftLanguageVersions: manifest.swiftLanguageVersions,
+                                   dependencies: manifest.dependencies,
                                    products: newProducts,
                                    targets: manifest.targets)
 
