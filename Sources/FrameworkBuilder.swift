@@ -47,18 +47,30 @@ struct FrameworkBuilder {
         try await addDynamicTypeToLibraryTarget()
 
         // build frameworks for all platforms
+        var platformsBuildSuccesfully = platforms
         for destination in platforms {
             print("building \(scheme) for \(destination)")
-            Command.archive(package: packagePath, scheme: scheme, destination: destination, derivedDataPath: derivedDataPath)
-                .forEach { command in
-                    try! command.run()
+            Command.archive(package: packagePath,
+                            scheme: scheme,
+                            destination: destination,
+                            derivedDataPath: derivedDataPath)
+            .forEach { command in
+                do {
+                    // build the framework for the platform
+                    try command.run()
+                } catch {
+                    // if the build fails, to not include the framework
+                    // for this platform in the final xcframework
+                    platformsBuildSuccesfully.removeAll(where: { $0 == destination })
                 }
+            }
         }
 
         // combine frameworks to an xcframework
-        //print("creating xcframework")
-        let command = Command.createXcframework(package: packagePath, scheme: scheme, destinations: platforms, derivedDataPath: derivedDataPath)
-        //print(command.args)
+        let command = Command.createXcframework(package: packagePath,
+                                                scheme: scheme,
+                                                destinations: platformsBuildSuccesfully,
+                                                derivedDataPath: derivedDataPath)
         print("creating \(scheme).xcframework")
 
         //TODO: name should be taken from the createXcframework command
@@ -178,7 +190,7 @@ struct Command: CustomStringConvertible {
         return "\(xcodePath)/usr/bin/xcodebuild".replacingOccurrences(of: "()", with: "")
     }
 
-    enum Destination: String, CaseIterable, CustomStringConvertible {
+    enum Destination: String, CaseIterable, CustomStringConvertible, Equatable {
         case ios, iosSimulator, macos, tvos, tvosSimulator, watchos, watchosSimulator
 
         //tvOS Simulator
