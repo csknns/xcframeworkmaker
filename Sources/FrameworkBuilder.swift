@@ -18,9 +18,11 @@ struct FrameworkBuilder {
     let packagePath: String
 
     var scheme: String
+    let platforms: [Command.Destination]
 
-    init(scheme: String, originalPackagePath: String?) throws {
+    init(scheme: String, originalPackagePath: String?, platforms: [Command.Destination]) throws {
         self.scheme = scheme
+        self.platforms = platforms
         self.originalPackagePath = originalPackagePath ?? FileManager.default.currentDirectoryPath
         packagePath = "\(tempDir)/\(scheme)"
 
@@ -45,8 +47,7 @@ struct FrameworkBuilder {
         try await addDynamicTypeToLibraryTarget()
 
         // build frameworks for all platforms
-        let destinations = [Command.Destination.ios, Command.Destination.iosSimulator] //
-        for destination in destinations /*Command.Destination.allCases*/ {
+        for destination in platforms {
             print("building \(scheme) for \(destination)")
             Command.archive(package: packagePath, scheme: scheme, destination: destination, derivedDataPath: derivedDataPath)
                 .forEach { command in
@@ -56,7 +57,7 @@ struct FrameworkBuilder {
 
         // combine frameworks to an xcframework
         //print("creating xcframework")
-        let command = Command.createXcframework(package: packagePath, scheme: scheme, destinations: destinations, derivedDataPath: derivedDataPath)
+        let command = Command.createXcframework(package: packagePath, scheme: scheme, destinations: platforms, derivedDataPath: derivedDataPath)
         //print(command.args)
         print("creating \(scheme).xcframework")
 
@@ -66,12 +67,6 @@ struct FrameworkBuilder {
 
         try! command.run()
     }
-
-//    static func copyLibraryToTempFolder() -> String {
-//        try? runAndPrint("cp", "\(packagePath)/*", "\(tempDir)/")
-//
-//        return tempDir
-//    }
 
     // If in the same folder we have Package.swift and an xcode project,
     // xcodebuild tries to build the xcode project
@@ -183,17 +178,47 @@ struct Command: CustomStringConvertible {
         return "\(xcodePath)/usr/bin/xcodebuild".replacingOccurrences(of: "()", with: "")
     }
 
-    enum Destination: CaseIterable, CustomStringConvertible {
-        case ios, macos, iosSimulator
+    enum Destination: String, CaseIterable, CustomStringConvertible {
+        case ios, iosSimulator, macos, tvos, tvosSimulator, watchos, watchosSimulator
 
+        //tvOS Simulator
         var description: String {
             switch self {
             case .ios:
                 return "generic/platform=iOS"
-            case .macos:
-                return "generic/platform=macOS"
             case .iosSimulator:
                 return "generic/platform=iOS Simulator"
+            case .macos:
+                return "generic/platform=macOS"
+            case .tvos:
+                return "generic/platform=tvOS"
+            case .tvosSimulator:
+                return "generic/platform=tvOS Simulator"
+            case .watchos:
+                return "generic/platform=watchOS"
+            case .watchosSimulator:
+                return "generic/platform=watchOS Simulator"
+            }
+        }
+
+        init?(rawValue: String) {
+            switch rawValue {
+            case "ios":
+                self = .ios
+            case "iosSimulator":
+                self = .iosSimulator
+            case "macos":
+                self = .macos
+            case "tvos":
+                self = .tvos
+            case "tvosSimulator":
+                self = .tvosSimulator
+            case "watchos":
+                self = .watchos
+            case "watchosSimulator":
+                self = .watchosSimulator
+            default:
+                return nil
             }
         }
     }
@@ -202,10 +227,18 @@ struct Command: CustomStringConvertible {
         switch destination {
         case .ios:
             return "iphoneos"
-        case .macos:
-            return "macos"
         case .iosSimulator:
             return "iphonesimulator"
+        case .macos:
+            return "macos"
+        case .tvos:
+            return "tvos"
+        case .tvosSimulator:
+            return "tvossimulator"
+        case .watchos:
+            return "watchos"
+        case .watchosSimulator:
+            return "watchosSimulator"
         }
     }
 
