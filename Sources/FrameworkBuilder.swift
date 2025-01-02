@@ -26,20 +26,21 @@ struct FrameworkBuilder {
         self.originalPackagePath = originalPackagePath ?? FileManager.default.currentDirectoryPath
         packagePath = "\(tempDir)/\(scheme)"
 
-        print("cleaning up temp directory !")
         // Clean up data from temp directory
         try? runAndPrint("rm", "-r", "-f", "\(packagePath)/")
         try runAndPrint("mkdir", "\(packagePath)/")
         // Copy library files to a temp folder
         try runAndPrint("cp", "-r", "\(self.originalPackagePath)/", "\(packagePath)")
 
+        
         main.currentdirectory = packagePath
+        main.stdout = try SwiftShellLogger(derivedDataPath: packagePath)
+        main.stderror = try SwiftShellLogger(derivedDataPath: packagePath)
     }
 
     func arun() async throws {
-        print("arun")
         let scheme = scheme
-        let derivedDataPath = "\(packagePath)/lala"//
+        let derivedDataPath = "\(packagePath)/derivedData"//
 
         try? runAndPrint("rm", "-rf", "\(derivedDataPath)")
 
@@ -76,8 +77,11 @@ struct FrameworkBuilder {
         //TODO: name should be taken from the createXcframework command
         // delete previous framework, of the create command will fail
         try? runAndPrint("rm", "-r", "\(packagePath)/\(scheme).xcframework")
-
         try! command.run()
+
+        print("full build log \(packagePath)/build.log")
+
+        print("created \(packagePath)/\(scheme).xcframework")
     }
 
     // If in the same folder we have Package.swift and an xcode project,
