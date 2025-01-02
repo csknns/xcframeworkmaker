@@ -104,12 +104,12 @@ struct FrameworkBuilder {
         //this is needed in order to produce the .framework
         // default are static libs
         let packageAbsPath = try AbsolutePath(validating: packagePath)
-        let workspace = try Workspace(forRootPackage: packageAbsPath)
+        let customToolsVersion = detectToolsVersion() ?? ToolsVersion.current
+        let workspace = try Workspace.makeWorkspace(forRootPackage: packageAbsPath, customToolsVersion: customToolsVersion)
         let observability = ObservabilitySystem({ print("\($0): \($1)") })
+
         var manifest = try await workspace.loadRootManifest(at: packageAbsPath,
                                                             observabilityScope: observability.topScope)
-
-        print("Found manifest \(manifest.path)")
 
         guard let library = manifest.products.first(where: { $0.name == scheme }) else {
             print("Could not find library with name '\(scheme)'")
@@ -149,23 +149,44 @@ struct FrameworkBuilder {
 
         let packageDirectory = try AbsolutePath(validating: packagePath)
         let newContents
-        = try newManifest.generateManifestFileContents(packageDirectory: packageDirectory) { productDescription in
+        = newManifest.generateManifestFileContents(packageDirectory: packageDirectory) { productDescription in
             return SourceCodeFragment(from: productDescription)
-            }
-
-        print("writing new manifest to \(manifest.path.pathString)")
+        }
 
         try newContents.write(toFile: manifest.path.pathString,
                               atomically: true,
-                              encoding: .utf8)
-
-        let versionSpecificManifestPath = manifest.path.parentDirectory.appending("Package@swift-\(ToolsVersion.current).swift")
-
-        print("writing new manifest to \(versionSpecificManifestPath)")
-
-        try newContents.write(toFile: versionSpecificManifestPath.pathString,
-                              atomically: true,
                               encoding: .utf8)  
+
+        print("writing new manifest to \(manifest.path.pathString)")
+    }
+
+    private func detectToolsVersion() -> ToolsVersion? {
+        let consoleOutput = SwiftShell.run("swift", "--version").stdout
+        // The stdout is something like:
+        // swift-driver version: 1.87.3 Apple Swift version 5.9.2 (swiftlang-5.9.2.2.56 clang-1500.1.0.2.5) Target: arm64-apple-macosx14.0
+
+        // return onlny the Swift version
+        if let swiftVersion = swiftVersionString(from: consoleOutput) {
+            return ToolsVersion(string: swiftVersion)
+        }
+
+        return nil
+    }
+
+    /// Extract the Swift version from the output of `swift --version` command
+    /// 
+    /// Example input: `Apple Swift version 5.9.2 (swiftlang-....'`
+    /// Example output: `5.9.2`
+    ///
+    /// - Parameter versionString: the output of `swift --version` command
+    /// - Returns: the Swift version as a string
+    private func swiftVersionString(from versionString: String) -> String? {
+        guard let match = versionString.range(of: "Apple Swift version ([0-9.]+)", options: .regularExpression) else {
+            return nil
+        }
+
+        let extracted = versionString[match]
+        return extracted.components(separatedBy: " ").last
     }
 }
 
