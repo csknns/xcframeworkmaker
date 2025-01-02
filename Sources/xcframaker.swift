@@ -1,6 +1,9 @@
 import Foundation
 import Combine
 import ArgumentParser
+import SourceControl
+import Basics
+import SwiftShell
 
 extension Command.Destination: ExpressibleByArgument {
     init?(argument: String) {
@@ -8,7 +11,8 @@ extension Command.Destination: ExpressibleByArgument {
     }
 }
 
-struct xcframaker: ParsableCommand {
+@main
+struct xcframaker: AsyncParsableCommand {
 
     @Argument(help: "The scheme to build")
     var scheme: String
@@ -19,24 +23,17 @@ struct xcframaker: ParsableCommand {
     @Option(help: "The platforms to build for")
     var platforms: [Command.Destination] = Command.Destination.allCases
 
-    mutating func run() throws {
+    mutating func run() async throws {
         print("Building \(scheme) for \(platforms)")
-        let semaphore = DispatchSemaphore(value: 0)
         let scheme = self.scheme
         let libraryFolder = self.libraryFolder
         let platforms = self.platforms
-        Task {
-            try await FrameworkBuilder(scheme: scheme,
-                                       originalPackagePath: libraryFolder,
-                                       platforms: platforms).arun()
-            semaphore.signal()
-        }
-        semaphore.wait()
-        print("run end")
+
+        try await FrameworkBuilder(scheme: scheme,
+                                   originalPackagePath: libraryFolder,
+                                   platforms: platforms).arun()
     }
 }
-
-xcframaker.main()
 
 extension String : LocalizedError {
     public var errorDescription: String? { self }
