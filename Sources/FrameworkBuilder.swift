@@ -50,20 +50,24 @@ struct FrameworkBuilder {
         // build frameworks for all platforms
         var platformsBuildSuccesfully = platforms
         for destination in platforms {
-            print("building \(scheme) for \(destination)")
-            Command.archive(package: packagePath,
-                            scheme: scheme,
-                            destination: destination,
-                            derivedDataPath: derivedDataPath)
-            .forEach { command in
+            print("building '\(scheme)' for '\(destination)'  ", terminator: "")
+            for command in Command.archive(package: packagePath,
+                                           scheme: scheme,
+                                           destination: destination,
+                                           derivedDataPath: derivedDataPath) {
                 do {
                     // build the framework for the platform
                     try command.run()
                 } catch {
+                    print("FAILED (will not add to xcframework)")
                     // if the build fails, to not include the framework
                     // for this platform in the final xcframework
                     platformsBuildSuccesfully.removeAll(where: { $0 == destination })
+                    break;
                 }
+            }
+            if platformsBuildSuccesfully.contains(destination) {
+                print("DONE")
             }
         }
 
